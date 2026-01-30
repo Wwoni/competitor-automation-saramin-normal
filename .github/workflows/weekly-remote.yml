@@ -22,5 +22,5 @@ jobs:
 
       - name: Run weekly pipeline
         env:
-          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
         run: bash scripts/run_weekly.sh
