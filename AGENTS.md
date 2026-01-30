@@ -94,6 +94,7 @@
 - 실행 로그 저장 위치: (예: GitHub Actions logs, Drive 로그 시트)
 - 장애 대응: 수동 재실행 가이드
  - 단계 분리 실행: `extract`(추출 탭) → `master`(Master 탭) 순서로 운영 가능
+ - 스케줄 이중화: 로컬 LaunchAgent + GitHub Actions(원격) 병행
 
 ## 12. 보안/권한
 - 서비스 계정 사용 여부

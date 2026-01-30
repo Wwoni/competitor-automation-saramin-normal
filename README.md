@@ -25,6 +25,27 @@ export GOOGLE_SERVICE_ACCOUNT_JSON='{"type":"service_account", ... }'
 python scripts/update_competitor_sheets.py
 ```
 
+## Local weekly schedule (macOS LaunchAgent)
+This project includes a weekly runner script:
+- `scripts/run_weekly.sh`
+- schedule: Mondays 14:10 (KST), logs to `logs/`
+
+LaunchAgent file:
+`~/Library/LaunchAgents/com.wanted.competitor-automation.plist`
+
+Load / unload:
+```bash
+launchctl load ~/Library/LaunchAgents/com.wanted.competitor-automation.plist
+launchctl unload ~/Library/LaunchAgents/com.wanted.competitor-automation.plist
+```
+
+## Remote weekly schedule (GitHub Actions)
+Workflow: `.github/workflows/weekly-remote.yml`
+- Runs Mondays 14:10 KST (05:10 UTC)
+- Requires secret: `GOOGLE_SERVICE_ACCOUNT_JSON`
+
+Note: `scripts/run_weekly.sh` uses `GOOGLE_SERVICE_ACCOUNT_JSON` if provided; otherwise it reads from `UTIL_JSON`.
+
 If you keep the service account JSON in a shared util folder, you can load it like this:
 ```bash
 export GOOGLE_SERVICE_ACCOUNT_JSON="$(cat /Users/wonheelee/Documents/Cursor/util/credentials/service-account.json)"
