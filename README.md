@@ -47,6 +47,7 @@ Tuning (optional):
 - `COMPETITOR_POSTPROCESS_START_ROW` (default: 2)
 - `COMPETITOR_POSTPROCESS_END_ROW` (default: 0 = until limit)
 - `COMPETITOR_SKIP_EXTRACT` (default: false)
+- `COMPETITOR_SKIP_POSTPROCESS` (default: false)
 
 Example:
 ```bash
@@ -85,6 +86,9 @@ Workflow: `.github/workflows/update-competitor-sheets.yml`
 - Master 탭 날짜 컬럼 갱신은 `Master_Meta`의 `last_date_col`을 기준으로 진행됨.
 - 값 고정(FREEZE)은 현재 수동 처리로 운영 (자동화 시 API 타임아웃 가능성 존재).
 - 추출 탭 후처리: A↔F 비교 및 C↔H 보정 규칙 적용 (아래 “Postprocess Rules” 참고).
+
+## Test Log
+- 2026-01-30: Full cycle verified (extract → postprocess chunked → master). Manual freeze remains required.
 
 ---
 

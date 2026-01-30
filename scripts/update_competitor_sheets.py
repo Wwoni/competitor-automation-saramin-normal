@@ -23,6 +23,7 @@ POSTPROCESS_CHUNK_SIZE = int(os.environ.get("COMPETITOR_POSTPROCESS_CHUNK_SIZE",
 POSTPROCESS_START_ROW = int(os.environ.get("COMPETITOR_POSTPROCESS_START_ROW", "2"))
 POSTPROCESS_END_ROW = int(os.environ.get("COMPETITOR_POSTPROCESS_END_ROW", "0"))
 SKIP_EXTRACT_UPDATE = os.environ.get("COMPETITOR_SKIP_EXTRACT", "false").lower() == "true"
+SKIP_POSTPROCESS = os.environ.get("COMPETITOR_SKIP_POSTPROCESS", "false").lower() == "true"
 SCOPES = [
     "https://www.googleapis.com/auth/drive.readonly",
     "https://www.googleapis.com/auth/spreadsheets",
@@ -698,7 +699,7 @@ def run_update() -> None:
             write_target_values(sheets_service, target_sheet_id, target_tab, values)
             print(f"[INFO] Write target done: {target_tab}")
 
-    if RUN_MODE in ("both", "extract"):
+    if RUN_MODE in ("both", "extract") and not SKIP_POSTPROCESS:
         tabs = postprocess_tabs
         if POSTPROCESS_ONLY_TAB:
             tabs = [POSTPROCESS_ONLY_TAB]
