@@ -17,6 +17,12 @@ CONFIG_PATH = os.environ.get("COMPETITOR_CONFIG", "config.json")
 RUN_MODE = os.environ.get("COMPETITOR_RUN_MODE", "both").lower()
 MASTER_ONLY_TAB = os.environ.get("COMPETITOR_MASTER_ONLY_TAB", "").strip()
 MASTER_FREEZE_VALUES = os.environ.get("COMPETITOR_MASTER_FREEZE", "true").lower() != "false"
+POSTPROCESS_ONLY_TAB = os.environ.get("COMPETITOR_POSTPROCESS_ONLY_TAB", "").strip()
+POSTPROCESS_MAX_ROWS = int(os.environ.get("COMPETITOR_POSTPROCESS_MAX_ROWS", "10000"))
+POSTPROCESS_CHUNK_SIZE = int(os.environ.get("COMPETITOR_POSTPROCESS_CHUNK_SIZE", "1000"))
+POSTPROCESS_START_ROW = int(os.environ.get("COMPETITOR_POSTPROCESS_START_ROW", "2"))
+POSTPROCESS_END_ROW = int(os.environ.get("COMPETITOR_POSTPROCESS_END_ROW", "0"))
+SKIP_EXTRACT_UPDATE = os.environ.get("COMPETITOR_SKIP_EXTRACT", "false").lower() == "true"
 SCOPES = [
     "https://www.googleapis.com/auth/drive.readonly",
     "https://www.googleapis.com/auth/spreadsheets",
@@ -528,6 +534,93 @@ def write_target_values(
     )
 
 
+def postprocess_extract_tab(sheets_service, spreadsheet_id: str, tab_name: str) -> None:
+    print(f"[INFO] Postprocess start: {tab_name}")
+    # Only read columns needed: A, C, E, F, H
+    ranges = [
+        f"'{tab_name}'!A2:A",
+        f"'{tab_name}'!C2:C",
+        f"'{tab_name}'!E2:E",
+        f"'{tab_name}'!F2:F",
+        f"'{tab_name}'!H2:H",
+    ]
+    response = exec_request(
+        sheets_service.spreadsheets().values().batchGet(
+            spreadsheetId=spreadsheet_id,
+            ranges=ranges,
+            valueRenderOption="FORMATTED_VALUE",
+        )
+    )
+    value_ranges = response.get("valueRanges", [])
+    if not value_ranges:
+        print(f"[SKIP] Postprocess no data: {tab_name}")
+        return
+
+    cols = []
+    max_len = 0
+    for vr in value_ranges:
+        col = vr.get("values", [])
+        cols.append(col)
+        max_len = max(max_len, len(col))
+
+    if max_len == 0:
+        print(f"[SKIP] Postprocess no data: {tab_name}")
+        return
+
+    limit = min(max_len, POSTPROCESS_MAX_ROWS)
+    start_row = max(2, POSTPROCESS_START_ROW)
+    end_row = POSTPROCESS_END_ROW if POSTPROCESS_END_ROW > 0 else (limit + 1)
+    if start_row >= end_row:
+        print(f"[SKIP] Postprocess invalid range: {tab_name} ({start_row}-{end_row})")
+        return
+    # Convert to 0-based offset from row 2
+    start_offset = start_row - 2
+    end_offset = min(end_row - 2, limit)
+    chunk = max(1, POSTPROCESS_CHUNK_SIZE)
+    start = start_offset
+    while start < end_offset:
+        end = min(start + chunk, end_offset)
+        updated_a = []
+        updated_c = []
+        for i in range(start, end):
+            a = str(cols[0][i][0]).strip() if i < len(cols[0]) and cols[0][i] else ""
+            c = str(cols[1][i][0]).strip() if i < len(cols[1]) and cols[1][i] else ""
+            e = str(cols[2][i][0]).strip() if i < len(cols[2]) and cols[2][i] else ""
+            f = str(cols[3][i][0]).strip() if i < len(cols[3]) and cols[3][i] else ""
+            h = str(cols[4][i][0]).strip() if i < len(cols[4]) and cols[4][i] else ""
+
+            if a != f and e == "-" and f not in ("-", "미가입", ""):
+                a = f
+
+            if c == "" and h not in ("-", ""):
+                c = h
+
+            updated_a.append([a])
+            updated_c.append([c])
+
+        row_start = 2 + start
+        exec_request(
+            sheets_service.spreadsheets().values().update(
+                spreadsheetId=spreadsheet_id,
+                range=f"'{tab_name}'!A{row_start}",
+                valueInputOption="RAW",
+                body={"values": updated_a},
+            )
+        )
+        exec_request(
+            sheets_service.spreadsheets().values().update(
+                spreadsheetId=spreadsheet_id,
+                range=f"'{tab_name}'!C{row_start}",
+                valueInputOption="RAW",
+                body={"values": updated_c},
+            )
+        )
+        print(f"[INFO] Postprocess chunk done: {tab_name} rows {row_start}-{row_start + len(updated_a) - 1}")
+        start = end
+
+    print(f"[INFO] Postprocess done: {tab_name}")
+
+
 def run_update() -> None:
     config = load_config(CONFIG_PATH)
     creds = load_credentials()
@@ -543,6 +636,7 @@ def run_update() -> None:
     source_range = config["source_range"]
     target_range = config["target_range"]
     mappings = config["mappings"]
+    postprocess_tabs = config.get("postprocess_tabs", [])
     master_tabs = config.get("master_tabs", [])
     master_meta_sheet = config.get("master_meta_sheet", "Master_Meta")
     master_meta_range = config.get("master_meta_range", "A1:B10")
@@ -570,7 +664,7 @@ def run_update() -> None:
                 master_meta_rows,
             )
 
-    if RUN_MODE in ("both", "extract"):
+    if RUN_MODE in ("both", "extract") and not SKIP_EXTRACT_UPDATE:
         for mapping in mappings:
             prefix = mapping["prefix"]
             target_tab = mapping["target_tab"]
@@ -603,6 +697,15 @@ def run_update() -> None:
             print(f"[INFO] Write target start: {target_tab}")
             write_target_values(sheets_service, target_sheet_id, target_tab, values)
             print(f"[INFO] Write target done: {target_tab}")
+
+    if RUN_MODE in ("both", "extract"):
+        tabs = postprocess_tabs
+        if POSTPROCESS_ONLY_TAB:
+            tabs = [POSTPROCESS_ONLY_TAB]
+        for tab_name in tabs:
+            if tab_name not in target_tabs:
+                raise TabMissingError(f"Postprocess tab not found: {tab_name}")
+            postprocess_extract_tab(sheets_service, target_sheet_id, tab_name)
 
     if RUN_MODE in ("both", "master"):
         for tab_name in master_tabs:

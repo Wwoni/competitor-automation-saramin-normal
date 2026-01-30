@@ -36,6 +36,18 @@ You can control which step runs by setting `COMPETITOR_RUN_MODE`:
 - `master`: update Master tabs only
 - `both` (default): run extract, then master
 
+Postprocess (company name / bizno) runs after extract by default. To run it alone:
+```bash
+COMPETITOR_RUN_MODE=extract COMPETITOR_POSTPROCESS_ONLY_TAB="점핏_추출" python scripts/update_competitor_sheets.py
+```
+
+Tuning (optional):
+- `COMPETITOR_POSTPROCESS_MAX_ROWS` (default: 10000)
+- `COMPETITOR_POSTPROCESS_CHUNK_SIZE` (default: 1000)
+- `COMPETITOR_POSTPROCESS_START_ROW` (default: 2)
+- `COMPETITOR_POSTPROCESS_END_ROW` (default: 0 = until limit)
+- `COMPETITOR_SKIP_EXTRACT` (default: false)
+
 Example:
 ```bash
 COMPETITOR_RUN_MODE=extract python scripts/update_competitor_sheets.py
@@ -72,6 +84,7 @@ Workflow: `.github/workflows/update-competitor-sheets.yml`
 - Target range is `A:C` and fully replaced each run.
 - Master 탭 날짜 컬럼 갱신은 `Master_Meta`의 `last_date_col`을 기준으로 진행됨.
 - 값 고정(FREEZE)은 현재 수동 처리로 운영 (자동화 시 API 타임아웃 가능성 존재).
+- 추출 탭 후처리: A↔F 비교 및 C↔H 보정 규칙 적용 (아래 “Postprocess Rules” 참고).
 
 ---
 
@@ -102,6 +115,31 @@ python scripts/update_competitor_sheets.py
 ```bash
 COMPETITOR_RUN_MODE=extract python scripts/update_competitor_sheets.py
 COMPETITOR_RUN_MODE=master python scripts/update_competitor_sheets.py
+```
+
+## Postprocess Rules (추출 탭 보정)
+After extract updates, the script normalizes values using columns A/E/F/H:
+- If `A != F` and `E == "-"` and `F not in ("-", "미가입", "")` → set `A = F`
+- If `C is empty` and `H not in ("-", "")` → set `C = H`
+
+Target tabs are configured via `postprocess_tabs` in `config.json`.
+
+### 운영 가이드 (분할 실행 예시)
+행이 많은 탭은 아래처럼 범위를 나눠서 실행합니다.
+
+예: 사람인(일반)_추출 (총 5,835행)
+```bash
+COMPETITOR_RUN_MODE=extract COMPETITOR_SKIP_EXTRACT=true COMPETITOR_POSTPROCESS_ONLY_TAB='사람인(일반)_추출' \\
+COMPETITOR_POSTPROCESS_START_ROW=2 COMPETITOR_POSTPROCESS_END_ROW=2002 COMPETITOR_POSTPROCESS_CHUNK_SIZE=250 \\
+python scripts/update_competitor_sheets.py
+
+COMPETITOR_RUN_MODE=extract COMPETITOR_SKIP_EXTRACT=true COMPETITOR_POSTPROCESS_ONLY_TAB='사람인(일반)_추출' \\
+COMPETITOR_POSTPROCESS_START_ROW=2002 COMPETITOR_POSTPROCESS_END_ROW=4002 COMPETITOR_POSTPROCESS_CHUNK_SIZE=250 \\
+python scripts/update_competitor_sheets.py
+
+COMPETITOR_RUN_MODE=extract COMPETITOR_SKIP_EXTRACT=true COMPETITOR_POSTPROCESS_ONLY_TAB='사람인(일반)_추출' \\
+COMPETITOR_POSTPROCESS_START_ROW=4002 COMPETITOR_POSTPROCESS_END_ROW=6000 COMPETITOR_POSTPROCESS_CHUNK_SIZE=250 \\
+python scripts/update_competitor_sheets.py
 ```
 
 ## 이전 주 컬럼 값 고정 (Master 이후)

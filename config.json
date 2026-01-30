@@ -4,6 +4,14 @@
   "source_sheet_name": "시트1",
   "source_range": "B:D",
   "target_range": "A:C",
+  "postprocess_tabs": [
+    "점핏_추출",
+    "원픽_추출",
+    "스마트리쿠르터_추출",
+    "리멤버_추출",
+    "사람인(일반)_추출",
+    "ddl_offercent_추출"
+  ],
   "master_tabs": [
     "점핏 현황_Master",
     "원픽 현황_Master",
