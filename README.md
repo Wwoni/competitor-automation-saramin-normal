@@ -25,6 +25,11 @@ export GOOGLE_SERVICE_ACCOUNT_JSON='{"type":"service_account", ... }'
 python scripts/update_competitor_sheets.py
 ```
 
+If you keep the service account JSON in a shared util folder, you can load it like this:
+```bash
+export GOOGLE_SERVICE_ACCOUNT_JSON="$(cat /Users/wonheelee/Documents/Cursor/util/credentials/service-account.json)"
+```
+
 ## Run mode (extract/master/both)
 You can control which step runs by setting `COMPETITOR_RUN_MODE`:
 - `extract`: update source → extract tabs only
