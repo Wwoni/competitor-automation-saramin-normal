@@ -1,0 +1,46 @@
+{
+  "drive_folder_id": "0AEhDsDMmTwieUk9PVA",
+  "target_sheet_id": "1cuCMDkpT-q0CWQU6bcwXQDYMFmOOgtNGKxKMWGOPhJQ",
+  "source_sheet_name": "시트1",
+  "source_range": "B:D",
+  "target_range": "A:C",
+  "master_tabs": [
+    "점핏 현황_Master",
+    "원픽 현황_Master",
+    "스마트리쿠르터 현황_Master",
+    "리멤버 현황_Master"
+  ],
+  "master_meta_sheet": "Master_Meta",
+  "master_meta_range": "A1:B10",
+  "master_max_rows": 2000,
+  "master_chunk_size": 500,
+  "master_meta_rows": {
+    "점핏 현황_Master": 2,
+    "원픽 현황_Master": 3,
+    "스마트리쿠르터 현황_Master": 4,
+    "리멤버 현황_Master": 5
+  },
+  "mappings": [
+    {
+      "prefix": "jumpit_",
+      "target_tab": "점핏_추출"
+    },
+    {
+      "prefix": "jobko_onepick_",
+      "target_tab": "원픽_추출"
+    },
+    {
+      "prefix": "saramin_headhunting_",
+      "target_tab": "스마트리쿠르터_추출"
+    },
+    {
+      "prefix": "remember_",
+      "target_tab": "리멤버_추출"
+    },
+    {
+      "prefix": "saramin_",
+      "target_tab": "사람인(일반)_추출",
+      "exclude_prefixes": ["saramin_headhunting_"]
+    }
+  ]
+}
